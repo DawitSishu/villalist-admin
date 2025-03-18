@@ -71,10 +71,24 @@ const lineChartOptions = {
   },
 };
 
+// Helper function to generate a human-readable date range text
+function getDateRangeText(): string {
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  
+  const formatDate = (date: Date): string => {
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+  
+  return `${formatDate(sevenDaysAgo)} - ${formatDate(today)}`;
+}
+
 export default function Inquiries() {
   const [searchQuery, setSearchQuery] = useState('');
   const [vacationInquiries, setVacationInquiries] = useState<InquiryType[]>([]);
   const [weeklyData, setWeeklyData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [weeklyLabels, setWeeklyLabels] = useState<string[]>(generateLastSevenDaysLabels());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -84,6 +98,45 @@ export default function Inquiries() {
   
   // Loading states for action buttons
   const [resolvingInquiryId, setResolvingInquiryId] = useState<string | null>(null);
+
+  // Generate labels for the last 7 days ending today
+  function generateLastSevenDaysLabels(): string[] {
+    const days = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Start from 6 days ago
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      days.push(dayNames[date.getDay()]);
+    }
+    
+    return days;
+  }
+
+  // Process weekly data based on inquiries
+  const processWeeklyInquiries = (inquiries: InquiryType[]): number[] => {
+    const dayCount: number[] = [0, 0, 0, 0, 0, 0, 0];
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i)); // Starting from 6 days ago
+      date.setHours(0, 0, 0, 0); // Set to start of day
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1); // End of the day
+      
+      // Count inquiries created on this specific day
+      const count = inquiries.filter(inquiry => {
+        const createdDate = new Date(inquiry.createdAt);
+        return createdDate >= date && createdDate < nextDate;
+      }).length;
+      
+      dayCount[i] = count;
+    }
+    
+    return dayCount;
+  };
 
   // Fetch inquiries data
   useEffect(() => {
@@ -112,7 +165,10 @@ export default function Inquiries() {
         }));
         
         setVacationInquiries(formattedInquiries);
-        setWeeklyData(data.weeklyData);
+        
+        // Process weekly data from the inquiries
+        const processedWeeklyData = processWeeklyInquiries(formattedInquiries);
+        setWeeklyData(processedWeeklyData);
       } catch (err) {
         console.error('Error fetching inquiries:', err);
         setError('Failed to load inquiries. Please try again later.');
@@ -170,13 +226,19 @@ export default function Inquiries() {
       }
       
       // Update local state to reflect the change
-      setVacationInquiries(prevInquiries => 
-        prevInquiries.map(inquiry => 
+      setVacationInquiries(prevInquiries => {
+        const updatedInquiries = prevInquiries.map(inquiry => 
           inquiry.id === inquiryId 
             ? { ...inquiry, status: newStatus } 
             : inquiry
-        )
-      );
+        );
+        
+        // Update weekly data whenever inquiries change
+        const newWeeklyData = processWeeklyInquiries(updatedInquiries);
+        setWeeklyData(newWeeklyData);
+        
+        return updatedInquiries;
+      });
       
     } catch (err) {
       console.error('Error updating inquiry status:', err);
@@ -184,9 +246,9 @@ export default function Inquiries() {
     }
   };
 
-  // Chart data
+  // Chart data with dynamic labels for the last 7 days
   const inquiriesChartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    labels: weeklyLabels,
     datasets: [
       {
         label: 'Inquiries',
@@ -276,9 +338,11 @@ export default function Inquiries() {
           </div>
         </div>
         
-        {/* Inquiry Chart */}
+        {/* Inquiry Chart - Updated title to show date range */}
         <div className="h-60 mb-6">
-          <h4 className="text-lg font-medium text-gray-700 mb-4">Weekly Inquiry Trend</h4>
+          <h4 className="text-lg font-medium text-gray-700 mb-4">
+            Weekly Inquiry Trend ({getDateRangeText()})
+          </h4>
           <Line 
             data={inquiriesChartData} 
             options={lineChartOptions}
