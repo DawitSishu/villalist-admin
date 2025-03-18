@@ -12,6 +12,8 @@
     "@headlessui/react": "^2.2.0",
     "@prisma/client": "^6.5.0",
     "chart.js": "^4.4.8",
+    "chartjs-plugin-datalabels": "^2.2.0",
+    "date-fns": "^4.1.0",
     "jose": "^5.10.0",
     "lucide-react": "^0.482.0",
     "next": "14.0.4",
