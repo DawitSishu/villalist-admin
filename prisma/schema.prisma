@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Listing {
+  id                String          @id @unique // Unique string for links
+  uriId             String          @unique 
+  title             String           @unique 
+  description       String
+  featuredImage     String
+  galleryImages     GalleryImage[]
+  typeOfPlace       String          // E.g., "Entire place", "Private room", "Hotel room", "Shared room"
+  address           String
+  pricePerNight     Float
+  maxGuests         Int
+  bedrooms          Int
+  bathrooms         Int
+  mapLat            Float
+  mapLng            Float
+  layout            Json?
+  isFeatured        Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+
+  // Flexible JSON field for any additional features
+  additionalDetails Json?           // Stores any additional listing-specific details
+
+  roomTypes         RoomType[] // Updated relation to RoomType
+}
+
+model RoomType {
+  id            String   @id @default(cuid())
+  listingId     String   // Foreign key to Listing
+  name          String   // E.g., "Deluxe Room", "Standard Room"
+  pricePerNight Float    // Room-specific nightly price
+  maxGuests     Int      // Max occupancy for this room type
+  bedrooms      Int
+  bathrooms     Int
+  imageLinks    String[] 
+   layout            Json?
+  Listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  // Flexible JSON field for any additional room-specific features
+  additionalDetails Json?           // Stores any additional room-specific details
+
+  @@map("room_types") // Updated table name
+}
+
+model GalleryImage {
+  id        String  @id @default(cuid())
+  listingId String
+  url       String
+  Listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("gallery_images")
+}
+
