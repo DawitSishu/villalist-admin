@@ -1284,7 +1284,7 @@ export default function Dashboard() {
               <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
                 <Building className="h-6 w-6 text-white" />
               </div>
-              <h1 className="ml-3 text-xl font-bold text-gray-900">BKK Luxe Admin</h1>
+              <h1 className="ml-3 text-xl font-bold text-gray-900">The VillaList Admin</h1>
             </div>
           </div>
 

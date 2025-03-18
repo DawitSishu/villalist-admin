@@ -109,7 +109,7 @@ export default function ForgotPassword() {
 
         <div className="bg-gray-50 px-8 py-4 border-t border-gray-200">
           <div className="text-center text-sm text-gray-600">
-            <p>© {new Date().getFullYear()} Your Company. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} The VillaList. All rights reserved.</p>
           </div>
         </div>
       </div>
