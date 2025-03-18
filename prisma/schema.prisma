@@ -32,6 +32,7 @@ model Listing {
   additionalDetails Json?           // Stores any additional listing-specific details
 
   roomTypes         RoomType[] // Updated relation to RoomType
+  bookings          Booking[]  // Relation to bookings
 }
 
 model RoomType {
@@ -61,3 +62,50 @@ model GalleryImage {
   @@map("gallery_images")
 }
 
+model LuxeMembership {
+  id              String   @id @default(cuid())
+  email           String?
+  phone           String?
+  name            String?
+  selectedServices String[]
+  additionalInfo  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("luxe_memberships")
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  propertyId  String   // Foreign key to Listing
+  propertyName String
+  guestName   String
+  guestEmail  String
+  checkIn     DateTime
+  checkOut    DateTime
+  guests      Int
+  status      String   @default("pending") // 'confirmed' | 'pending' | 'cancelled'
+  totalAmount Float
+  createdAt   DateTime @default(now())
+  
+  // Relation to Listing
+  property    Listing  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+
+model VacationInquiry {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  location    String
+  checkInDate DateTime
+  checkOutDate DateTime
+  guests      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  status      String   @default("new") // 'new' | 'contacted' | 'resolved'
+
+  @@map("vacation_inquiries")
+}
