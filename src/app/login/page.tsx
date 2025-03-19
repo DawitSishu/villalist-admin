@@ -86,11 +86,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600">
-              Demo credentials: admin@example.com / admin123
-            </p>
-          </div>
         </div>
 
         <div className="bg-gray-50 px-8 py-4 border-t border-gray-200">
