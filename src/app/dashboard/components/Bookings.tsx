@@ -100,7 +100,9 @@ const barChartOptions = {
 
 export default function Bookings() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+  const [displayedBookings, setDisplayedBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -115,7 +117,7 @@ export default function Bookings() {
   const [cancelledCount, setCancelledCount] = useState(0);
   const [weeklyBookingData, setWeeklyBookingData] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
 
-  // Add new state for the chart dates that will be received from the API
+  // Add new state for the chart dates
   const [chartDates, setChartDates] = useState<string[]>([]);
 
   // Add new state for the view popup
@@ -133,35 +135,27 @@ export default function Bookings() {
   // Add new state for the simple chart
   const [useSimpleChart, setUseSimpleChart] = useState(false);
 
-  // Fetch bookings from API
+  // Fetch all bookings from API
   useEffect(() => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/bookings?page=${currentPage}&limit=${bookingsPerPage}&search=${searchQuery}`);
+        const res = await fetch(`/api/bookings`);
         
         if (!res.ok) {
           throw new Error('Failed to fetch bookings');
         }
         
         const data = await res.json();
-        setBookings(data.bookings);
+        console.log("Bookings data:", data);
+        setAllBookings(data.bookings);
         setTotalBookings(data.total);
         setConfirmedCount(data.stats.confirmed);
         setPendingCount(data.stats.pending);
         setCancelledCount(data.stats.cancelled);
         
-        // Use the weekDates from the API response
-        if (data.weekDates && data.weekDates.length > 0) {
-          setChartDates(data.weekDates);
-          console.log("Setting chart dates:", data.weekDates);
-        }
-        
-        // Use the weeklyData from the API response - these are the actual booking counts
-        if (data.weeklyData && data.weeklyData.length > 0) {
-          setWeeklyBookingData(data.weeklyData);
-          console.log("Setting weekly data (actual booking counts):", data.weeklyData);
-        }
+        // Generate chart dates
+        generateChartData(data.bookings);
       } catch (err) {
         setError('Error loading bookings');
         console.error(err);
@@ -171,7 +165,89 @@ export default function Bookings() {
     };
     
     fetchBookings();
-  }, [currentPage, searchQuery]);
+  }, []);
+
+  // Filter bookings based on search query
+  useEffect(() => {
+    if (allBookings.length > 0) {
+      // Filter bookings based on search query
+      const filtered = searchQuery 
+        ? allBookings.filter(booking => 
+            booking.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            booking.guestEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            booking.propertyName.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : allBookings;
+      
+      setFilteredBookings(filtered);
+      setTotalBookings(filtered.length);
+      
+      // Update pagination
+      const startIndex = (currentPage - 1) * bookingsPerPage;
+      const endIndex = startIndex + bookingsPerPage;
+      setDisplayedBookings(filtered.slice(startIndex, endIndex));
+      
+      // Reset to first page if current page is now invalid
+      if (filtered.length > 0 && startIndex >= filtered.length) {
+        setCurrentPage(1);
+      }
+    }
+  }, [searchQuery, allBookings, currentPage]);
+
+  // Handle pagination changes
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * bookingsPerPage;
+    const endIndex = startIndex + bookingsPerPage;
+    setDisplayedBookings(filteredBookings.slice(startIndex, endIndex));
+  }, [currentPage, filteredBookings]);
+
+  // Generate chart data from bookings
+  const generateChartData = (bookings: Booking[]) => {
+    // Get the current date and calculate current week's start/end dates
+    const today = new Date();
+    const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 6); // 6 days ago to include today = 7 days total
+    
+    // Create an array of the last 7 days (including today)
+    const weekDays: Date[] = [];
+    const weekDatesFormatted: string[] = [];
+    
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startDate);
+      day.setDate(startDate.getDate() + i);
+      weekDays.push(day);
+      
+      // Format as "Mon, 9/25"
+      weekDatesFormatted.push(
+        day.toLocaleDateString('en-US', { weekday: 'short' }) + 
+        ', ' + 
+        (day.getMonth() + 1) + '/' + day.getDate()
+      );
+    }
+    
+    setChartDates(weekDatesFormatted);
+    
+    // Initialize weeklyData with zeros
+    const weeklyData = Array(7).fill(0);
+    
+    // Count bookings for each day of the week
+    bookings.forEach(booking => {
+      const bookingDate = new Date(booking.createdAt);
+      bookingDate.setHours(0, 0, 0, 0); // Reset to start of day
+      
+      // Find the index of this date in our weekDays array
+      for (let i = 0; i < 7; i++) {
+        if (bookingDate.getTime() === weekDays[i].getTime()) {
+          weeklyData[i]++;
+          break;
+        }
+      }
+    });
+    
+    console.log("Weekly data array:", weeklyData);
+    setWeeklyBookingData(weeklyData);
+  };
 
   // Format dates properly
   const formatDate = (date: Date | string) => {
@@ -192,7 +268,7 @@ export default function Bookings() {
   useEffect(() => {
     const logChartData = () => {
       if (chartDates.length > 0 && weeklyBookingData.length > 0) {
-        console.log("Chart ready with data:", {
+        console.log("Bookings component chart ready with data:", {
           labels: chartDates,
           data: weeklyBookingData
         });
@@ -202,35 +278,38 @@ export default function Bookings() {
     logChartData();
   }, [chartDates, weeklyBookingData]);
 
-  // Make sure we have data to show in the chart if there are bookings
-  useEffect(() => {
-    if (totalBookings > 0 && weeklyBookingData.every(val => val === 0)) {
-      // If we have bookings but no recent booking activity, 
-      // show at least one booking on the most recent day
-      const updatedData = [...weeklyBookingData] as number[];
-      updatedData[updatedData.length - 1] = 1; // Set latest day to 1
-      setWeeklyBookingData(updatedData);
-    }
-  }, [totalBookings, weeklyBookingData]);
-
-  // Force data to have at least one visible value if all values are 0
-  const processedChartData = weeklyBookingData.map(val => val === 0 ? 1 : val);
-
   // Chart data updated to use real data with actual dates
   const bookingsChartData = {
     labels: chartDates,
     datasets: [
       {
         label: 'Bookings',
-        data: weeklyBookingData,
+        data: weeklyBookingData, // Use the raw data from API without local modifications
         backgroundColor: 'rgba(52, 211, 153, 0.8)',
         borderColor: 'rgba(52, 211, 153, 1)',
         borderWidth: 1,
         borderRadius: 4,
         hoverBackgroundColor: 'rgba(52, 211, 153, 1)',
-        minBarLength: 10, // Ensure bars are always visible
+        minBarLength: 10, // This ensures the bars are visible even with small values
       },
     ],
+  };
+
+  // Add tooltip callback to show booking status in tooltip
+  const enhancedChartOptions = {
+    ...barChartOptions,
+    plugins: {
+      ...barChartOptions.plugins,
+      tooltip: {
+        ...barChartOptions.plugins?.tooltip,
+        callbacks: {
+          afterLabel: function(context: any) {
+            // If we have status breakdown data, display it
+            return `Includes all bookings (confirmed, pending, and cancelled)`;
+          }
+        }
+      }
+    }
   };
 
   // If there's no actual data, display a message instead of a fallback visual
@@ -253,7 +332,7 @@ export default function Bookings() {
   };
 
   const handleNextPage = () => {
-    if (currentPage * bookingsPerPage < totalBookings) {
+    if (currentPage * bookingsPerPage < filteredBookings.length) {
       setCurrentPage(currentPage + 1);
     }
   };
@@ -278,11 +357,15 @@ export default function Bookings() {
       // Get the updated booking data
       const updatedBooking = await res.json();
       
-      // Update the booking in the list
-      const updatedBookings = bookings.map(booking => 
-        booking.id === bookingId ? { ...booking, status: newStatus as 'confirmed' | 'pending' | 'cancelled' } : booking
-      );
-      setBookings(updatedBookings);
+      // Update all booking collections
+      const updateBookingInList = (list: Booking[]) => 
+        list.map(booking => 
+          booking.id === bookingId ? { ...booking, status: newStatus as 'confirmed' | 'pending' | 'cancelled' } : booking
+        );
+      
+      setAllBookings(updateBookingInList(allBookings));
+      setFilteredBookings(updateBookingInList(filteredBookings));
+      setDisplayedBookings(updateBookingInList(displayedBookings));
       
       // Update selected booking if open in modal
       if (selectedBooking?.id === bookingId) {
@@ -292,23 +375,23 @@ export default function Bookings() {
       // Update counts
       if (newStatus === 'confirmed') {
         setConfirmedCount(prev => prev + 1);
-        if (bookings.find(b => b.id === bookingId)?.status === 'pending') {
+        if (allBookings.find(b => b.id === bookingId)?.status === 'pending') {
           setPendingCount(prev => prev - 1);
-        } else if (bookings.find(b => b.id === bookingId)?.status === 'cancelled') {
+        } else if (allBookings.find(b => b.id === bookingId)?.status === 'cancelled') {
           setCancelledCount(prev => prev - 1);
         }
       } else if (newStatus === 'pending') {
         setPendingCount(prev => prev + 1);
-        if (bookings.find(b => b.id === bookingId)?.status === 'confirmed') {
+        if (allBookings.find(b => b.id === bookingId)?.status === 'confirmed') {
           setConfirmedCount(prev => prev - 1);
-        } else if (bookings.find(b => b.id === bookingId)?.status === 'cancelled') {
+        } else if (allBookings.find(b => b.id === bookingId)?.status === 'cancelled') {
           setCancelledCount(prev => prev - 1);
         }
       } else if (newStatus === 'cancelled') {
         setCancelledCount(prev => prev + 1);
-        if (bookings.find(b => b.id === bookingId)?.status === 'confirmed') {
+        if (allBookings.find(b => b.id === bookingId)?.status === 'confirmed') {
           setConfirmedCount(prev => prev - 1);
-        } else if (bookings.find(b => b.id === bookingId)?.status === 'pending') {
+        } else if (allBookings.find(b => b.id === bookingId)?.status === 'pending') {
           setPendingCount(prev => prev - 1);
         }
       }
@@ -376,7 +459,7 @@ export default function Bookings() {
   return (
     <div className="space-y-6">
       {/* Add main loading state */}
-      {loading && bookings.length === 0 ? (
+      {loading && displayedBookings.length === 0 ? (
         <div className="p-8 bg-white rounded-xl shadow-sm flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
           <p className="text-gray-500">Loading bookings data...</p>
@@ -450,8 +533,7 @@ export default function Bookings() {
                     <Bar 
                       ref={chartRef}
                       data={bookingsChartData} 
-                      options={barChartOptions}
-                      height={200}
+                      options={enhancedChartOptions}
                     />
                   )}
                 </>
@@ -481,13 +563,13 @@ export default function Bookings() {
             
             {/* Table with loading states */}
         <div className="overflow-x-auto">
-              {loading && bookings.length > 0 ? (
+              {loading && displayedBookings.length > 0 ? (
                 <div className="absolute inset-0 bg-white bg-opacity-70 z-10 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
                 </div>
               ) : null}
               
-              {bookings.length === 0 && !loading ? (
+              {displayedBookings.length === 0 && !loading ? (
                 <div className="p-6 text-center text-gray-500">
                   No bookings found
                   {searchQuery && (
@@ -527,7 +609,7 @@ export default function Bookings() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {bookings.map((booking) => (
+              {displayedBookings.map((booking) => (
                 <tr key={booking.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -613,11 +695,11 @@ export default function Bookings() {
         </div>
             
             {/* Pagination */}
-            {bookings.length > 0 && (
+            {filteredBookings.length > 0 && (
         <div className="px-6 py-4 border-t border-gray-200">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-500">
-                    Showing <span className="font-medium">{bookings.length}</span> of <span className="font-medium">{totalBookings}</span> bookings
+              Showing <span className="font-medium">{displayedBookings.length}</span> of <span className="font-medium">{filteredBookings.length}</span> bookings
             </div>
             <div className="flex space-x-2">
                     <button 
@@ -631,10 +713,10 @@ export default function Bookings() {
               </button>
                     <button 
                       className={`px-3 py-1 border border-gray-300 rounded-md text-sm font-medium ${
-                        currentPage * bookingsPerPage < totalBookings ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
+                        currentPage * bookingsPerPage < filteredBookings.length ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
                       }`}
                       onClick={handleNextPage}
-                      disabled={currentPage * bookingsPerPage >= totalBookings || loading}
+                      disabled={currentPage * bookingsPerPage >= filteredBookings.length || loading}
                     >
                 Next
               </button>

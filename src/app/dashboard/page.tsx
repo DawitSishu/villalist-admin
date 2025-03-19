@@ -68,6 +68,19 @@ export default function Dashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Setup event listener for tab changes from Overview component
+  useEffect(() => {
+    const handleSetActiveTab = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+    
+    window.addEventListener('set-active-tab', handleSetActiveTab as EventListener);
+    
+    return () => {
+      window.removeEventListener('set-active-tab', handleSetActiveTab as EventListener);
+    };
+  }, []);
+
   // Show loading state
   if (loading) {
     return (
@@ -87,6 +100,11 @@ export default function Dashboard() {
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  const handleLogout = () => {
+    // Implement your logout logic here
+    console.log('Logging out...');
   };
 
   const renderContent = () => {
@@ -132,7 +150,7 @@ export default function Dashboard() {
         setActiveTab={setActiveTab}
         sidebarOpen={sidebarOpen}
         toggleSidebar={toggleSidebar}
-        logout={logout}
+        logout={handleLogout}
       />
 
       {/* Main content */}
