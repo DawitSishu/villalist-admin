@@ -373,31 +373,6 @@ export default function Bookings() {
     setBookingToCancel(null);
   };
 
-  // Create a React-based bar chart as an alternative to Chart.js
-  const SimpleBarChart = ({ data, labels }: { data: number[], labels: string[] }) => {
-    // Find the maximum value to normalize heights
-    const maxValue = Math.max(...data, 1);
-    
-    return (
-      <div className="h-full flex flex-col">
-        <div className="flex-1 flex items-end justify-between px-4 py-2">
-          {data.map((value, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div className="text-xs mb-1 font-semibold">{value}</div>
-              <div 
-                className="bg-emerald-400 w-12 rounded-t-md transition-all duration-500" 
-                style={{ 
-                  height: `${Math.max(20, (value / maxValue) * 150)}px`,
-                }}
-              ></div>
-              <div className="text-xs mt-2">{labels[i] || `Day ${i+1}`}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       {/* Add main loading state */}
@@ -469,22 +444,8 @@ export default function Bookings() {
             <div style={{ height: '200px', width: '100%', position: 'relative' }}>
               {chartDates.length > 0 ? (
                 <>
-                  <div className="mb-2 text-xs text-gray-500 text-right">
-                    Try toggling between charts:
-                    <button 
-                      onClick={() => setUseSimpleChart(!useSimpleChart)}
-                      className="ml-2 text-indigo-600 hover:text-indigo-800 underline"
-                    >
-                      {useSimpleChart ? 'Use Chart.js' : 'Use Simple Chart'}
-                    </button>
-                  </div>
                   {totalBookings === 0 && weeklyBookingData.every(val => val === 0) ? (
                     renderEmptyDataMessage()
-                  ) : useSimpleChart ? (
-                    <SimpleBarChart 
-                      data={weeklyBookingData}
-                      labels={chartDates}
-                    />
                   ) : (
                     <Bar 
                       ref={chartRef}

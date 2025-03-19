@@ -30,9 +30,11 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating booking:', error);
     return NextResponse.json(
-      { error: 'Failed to update booking' },
+      { error: 'Failed to update booking status', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -59,8 +61,10 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching booking:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch booking' },
+      { error: 'Failed to fetch booking', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 } 
