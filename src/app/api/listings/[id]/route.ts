@@ -46,6 +46,7 @@ export async function GET(
         bathrooms: true,
         address: true,
         typeOfPlace: true,
+        isFeatured: true,
       },
     });
 
@@ -85,6 +86,7 @@ export async function PATCH(
       'bedrooms',
       'bathrooms',
       'typeOfPlace',
+      'isFeatured',
     ];
 
     // Filter out any disallowed fields
@@ -124,6 +126,7 @@ export async function PATCH(
         typeOfPlace: true,
         address: true,
         featuredImage: true,
+        isFeatured: true,
       },
     });
 

@@ -25,6 +25,7 @@ type Listing = {
   address: string;
   description?: string;
   typeOfPlace?: string;
+  isFeatured?: boolean;
   // Add other fields if needed for display
 };
 
@@ -44,6 +45,7 @@ type EditableListingFields = {
   bedrooms: number;
   bathrooms: number;
   typeOfPlace: string;
+  isFeatured: boolean;
 };
 
 // Form status for the edit modal
@@ -76,6 +78,7 @@ export default function Properties() {
     bedrooms: 0,
     bathrooms: 0,
     typeOfPlace: '',
+    isFeatured: false,
   });
   const [formStatus, setFormStatus] = useState<FormStatus>('idle');
   const [editError, setEditError] = useState<string | null>(null);
@@ -167,6 +170,7 @@ export default function Properties() {
         bedrooms: listing.bedrooms || 0,
         bathrooms: listing.bathrooms || 0,
         typeOfPlace: listing.typeOfPlace || '',
+        isFeatured: listing.isFeatured || false,
       });
       
       setIsEditModalOpen(true);
@@ -242,6 +246,14 @@ export default function Properties() {
       setEditError(error instanceof Error ? error.message : 'An unknown error occurred');
       setFormStatus('error');
     }
+  };
+
+  // Handle toggle for featured switch
+  const handleFeaturedToggle = () => {
+    setEditFormData({
+      ...editFormData,
+      isFeatured: !editFormData.isFeatured,
+    });
   };
 
   // Generate page numbers array for pagination
@@ -347,6 +359,9 @@ export default function Properties() {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Details
                     </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Featured
+                    </th>
                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -396,6 +411,13 @@ export default function Properties() {
                             {listing.maxGuests}
                           </span>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          listing.isFeatured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {listing.isFeatured ? 'Featured' : 'Not Featured'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button 
@@ -533,6 +555,29 @@ export default function Properties() {
                     <option value="Hotel room">Hotel room</option>
                     <option value="Shared room">Shared room</option>
                   </select>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <label htmlFor="isFeatured" className="block text-sm font-medium text-gray-700">
+                    Feature this property
+                  </label>
+                  <button
+                    type="button"
+                    id="isFeatured"
+                    onClick={handleFeaturedToggle}
+                    disabled={formStatus === 'submitting' || formStatus === 'success'}
+                    className={`${
+                      editFormData.isFeatured ? 'bg-indigo-600' : 'bg-gray-200'
+                    } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                  >
+                    <span className="sr-only">Toggle featured status</span>
+                    <span
+                      aria-hidden="true"
+                      className={`${
+                        editFormData.isFeatured ? 'translate-x-5' : 'translate-x-0'
+                      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                    ></span>
+                  </button>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

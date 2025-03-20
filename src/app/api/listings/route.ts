@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
     const where = search 
       ? {
           OR: [
-            { title: { contains: search, mode: 'insensitive' } },
-            { address: { contains: search, mode: 'insensitive' } },
-            { id: { contains: search, mode: 'insensitive' } }
+            { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            { address: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            { id: { contains: search, mode: Prisma.QueryMode.insensitive } }
           ]
         }
       : {};
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
           bedrooms: true,
           bathrooms: true,
           address: true,
+          isFeatured: true,
         },
         skip,
         take: limit,
